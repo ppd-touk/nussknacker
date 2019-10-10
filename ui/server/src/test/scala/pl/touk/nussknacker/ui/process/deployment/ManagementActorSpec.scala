@@ -8,6 +8,7 @@ import pl.touk.nussknacker.engine.api.deployment.CustomProcess
 import pl.touk.nussknacker.engine.api.process.ProcessName
 import pl.touk.nussknacker.restmodel.process
 import pl.touk.nussknacker.restmodel.process.ProcessIdWithName
+import pl.touk.nussknacker.ui.api.ChangesManagement
 import pl.touk.nussknacker.ui.api.helpers.TestFactory.{MockProcessManager, newDeploymentProcessRepository, newProcessRepository, newWriteProcessRepository, testCategoryName}
 import pl.touk.nussknacker.ui.api.helpers.{TestFactory, TestProcessingTypes, WithHsqlDbTesting}
 import pl.touk.nussknacker.ui.process.JobStatusService
@@ -30,7 +31,7 @@ class ManagementActorSpec extends FunSuite  with Matchers with ScalaFutures with
   private val writeProcessRepository = newWriteProcessRepository(db)
   private val deploymentProcessRepository = newDeploymentProcessRepository(db)
   private val managementActor = ManagementActor(env,
-    Map(TestProcessingTypes.Streaming -> processManager), processRepository, deploymentProcessRepository, TestFactory.sampleResolver)
+    Map(TestProcessingTypes.Streaming -> processManager), processRepository, deploymentProcessRepository, TestFactory.sampleResolver, ChangesManagement.noop)
 
   private val jobStatusService = new JobStatusService(managementActor)
 

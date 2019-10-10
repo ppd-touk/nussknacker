@@ -46,7 +46,7 @@ trait EspItTest extends LazyLogging with ScalaFutures with WithHsqlDbTesting wit
 
   val processManager = new MockProcessManager
   def createManagementActorRef = ManagementActor(env,
-    Map(TestProcessingTypes.Streaming -> processManager), processRepository, deploymentProcessRepository, TestFactory.sampleResolver)
+    Map(TestProcessingTypes.Streaming -> processManager), processRepository, deploymentProcessRepository, TestFactory.sampleResolver, ChangesManagement.noop)
 
   val managementActor: ActorRef = createManagementActorRef
   val jobStatusService = new JobStatusService(managementActor)
@@ -66,7 +66,8 @@ trait EspItTest extends LazyLogging with ScalaFutures with WithHsqlDbTesting wit
     processValidation = processValidation,
     typesForCategories = typesForCategories,
     newProcessPreparer = newProcessPreparer,
-    processAuthorizer = processAuthorizer
+    processAuthorizer = processAuthorizer,
+    changesManagement = ChangesManagement.noop
   )
 
   private val config = system.settings.config.withFallback(ConfigFactory.load())

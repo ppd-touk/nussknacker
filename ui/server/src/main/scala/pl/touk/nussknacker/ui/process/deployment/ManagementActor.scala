@@ -13,6 +13,7 @@ import pl.touk.nussknacker.restmodel.displayedgraph.{DisplayableProcess, Process
 import pl.touk.nussknacker.restmodel.processdetails.DeploymentAction
 import pl.touk.nussknacker.ui.db.entity.ProcessVersionEntityData
 import pl.touk.nussknacker.engine.marshall.ProcessMarshaller
+import pl.touk.nussknacker.ui.api.ChangesManagement
 import pl.touk.nussknacker.ui.process.repository.ProcessRepository.ProcessNotFoundError
 import pl.touk.nussknacker.ui.process.repository.{DeployedProcessRepository, FetchingProcessRepository}
 import pl.touk.nussknacker.ui.process.subprocess.SubprocessResolver
@@ -27,15 +28,20 @@ object ManagementActor {
   def apply(environment: String,
             managers: Map[ProcessingType, ProcessManager],
             processRepository: FetchingProcessRepository,
-            deployedProcessRepository: DeployedProcessRepository, subprocessResolver: SubprocessResolver)(implicit context: ActorRefFactory): ActorRef = {
-    context.actorOf(Props(classOf[ManagementActor], environment, managers, processRepository, deployedProcessRepository, subprocessResolver))
+            deployedProcessRepository: DeployedProcessRepository,
+            subprocessResolver: SubprocessResolver,
+            changesManagement: ChangesManagement)
+           (implicit context: ActorRefFactory): ActorRef = {
+    context.actorOf(Props(classOf[ManagementActor], environment, managers, processRepository, deployedProcessRepository, subprocessResolver, changesManagement))
   }
 
 }
 
 class ManagementActor(environment: String, managers: Map[ProcessingType, ProcessManager],
-                      processRepository: FetchingProcessRepository,
-                      deployedProcessRepository: DeployedProcessRepository, subprocessResolver: SubprocessResolver) extends Actor with LazyLogging {
+                      val processRepository: FetchingProcessRepository,
+                      deployedProcessRepository: DeployedProcessRepository,
+                      subprocessResolver: SubprocessResolver,
+                      changesManagement: ChangesManagement) extends Actor with LazyLogging {
 
   private var beingDeployed = Map[ProcessName, DeployInfo]()
 
@@ -72,6 +78,12 @@ class ManagementActor(environment: String, managers: Map[ProcessingType, Process
       reply(processStatus)
     case DeploymentActionFinished(id, None) =>
       logger.info(s"Finishing ${beingDeployed.get(id.name)} of $id")
+      beingDeployed.get(id.name).foreach { deployInfo =>
+        changesManagement.onDeployed(processRepository)(id.name, deployInfo)
+          .onFailure {
+            case ex => logger.error(s"Error while sending onDeployed event for $deployInfo of $id", ex)
+          }
+      }
       beingDeployed -= id.name
     case DeploymentActionFinished(id, Some(failure)) =>
       logger.error(s"Action: ${beingDeployed.get(id.name)} of $id finished with failure", failure)
